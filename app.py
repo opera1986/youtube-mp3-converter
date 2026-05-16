@@ -54,7 +54,8 @@ def run_download(job_id, url):
         'quiet': True,
         'no_warnings': True,
         'cachedir': False,
-        'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
+        'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
 
     try:
