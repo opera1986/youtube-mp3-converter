@@ -54,6 +54,7 @@ def run_download(job_id, url):
         'quiet': True,
         'no_warnings': True,
         'cachedir': False,
+        'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
     }
 
     try:
