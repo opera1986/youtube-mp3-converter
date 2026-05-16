@@ -46,6 +46,31 @@ class YdlLogger:
     def error(self, msg):
         app.logger.error(f"[yt-dlp] {msg}")
 
+@app.route('/debug')
+def debug_info():
+    import subprocess
+    try:
+        node_v = subprocess.check_output(['node', '-v'], stderr=subprocess.STDOUT).decode().strip()
+    except:
+        node_v = "Not Found"
+    
+    try:
+        yt_dlp_v = subprocess.check_output(['yt-dlp', '--version'], stderr=subprocess.STDOUT).decode().strip()
+    except:
+        try:
+            import yt_dlp
+            yt_dlp_v = yt_dlp.version.__version__
+        except:
+            yt_dlp_v = "Not Found"
+            
+    return jsonify({
+        'node_version': node_v,
+        'yt_dlp_version': yt_dlp_v,
+        'os': os.name,
+        'cwd': os.getcwd(),
+        'cookies_exist': os.path.exists('cookies.txt')
+    })
+
 def run_download(job_id, url):
     def progress_hook(d):
         if d['status'] == 'downloading':
@@ -77,6 +102,12 @@ def run_download(job_id, url):
         'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'logger': YdlLogger(),
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'skip': ['hls', 'dash']
+            }
+        },
     }
 
     try:
