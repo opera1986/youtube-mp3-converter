@@ -99,11 +99,12 @@ def run_download(job_id, url):
         'quiet': False,
         'no_warnings': False,
         'cachedir': False,
+        'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'logger': YdlLogger(),
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android', 'web_embedded'],
+                'player_client': ['web', 'web_embedded'],
                 'skip': ['hls', 'dash']
             }
         },
@@ -111,6 +112,10 @@ def run_download(job_id, url):
 
     try:
         app.logger.info(f"Starting job {job_id} for URL: {url}")
+        # Small random sleep to mimic human behavior
+        import random
+        time.sleep(random.uniform(1.0, 3.0))
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
