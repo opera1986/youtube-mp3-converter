@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: youtube-mp3-converter
+    name: youtube-mp3-lucky
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
