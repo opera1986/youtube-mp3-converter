@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: youtube-mp3-lucky
+    name: luckymusic-mp3
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
