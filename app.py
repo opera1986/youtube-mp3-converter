@@ -7,6 +7,8 @@ import uuid
 import json
 import time
 import ssl
+import logging
+from logging.handlers import RotatingFileHandler
 
 # SSL certificate bypass
 try:
@@ -19,12 +21,30 @@ else:
 app = Flask(__name__)
 CORS(app)
 
-# Use a local directory for downloads to work on both local and cloud (Render)
+# Configure Logging
+log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app.log')
+logging.basicConfig(level=logging.INFO)
+handler = RotatingFileHandler(log_file, maxBytes=200000, backupCount=1)
+handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+app.logger.addHandler(handler)
+
+# Use a local directory for downloads
 DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
 jobs = {}
+
+class YdlLogger:
+    def debug(self, msg):
+        if not msg.startswith('[debug] '):
+            app.logger.info(f"[yt-dlp] {msg}")
+    def info(self, msg):
+        app.logger.info(f"[yt-dlp] {msg}")
+    def warning(self, msg):
+        app.logger.warning(f"[yt-dlp] {msg}")
+    def error(self, msg):
+        app.logger.error(f"[yt-dlp] {msg}")
 
 def run_download(job_id, url):
     def progress_hook(d):
@@ -51,33 +71,42 @@ def run_download(job_id, url):
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook],
         'nocheckcertificate': True,
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
         'cachedir': False,
         'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'logger': YdlLogger(),
     }
 
     try:
+        app.logger.info(f"Starting job {job_id} for URL: {url}")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            # Change extension to mp3 as it was post-processed
             mp3_filename = os.path.splitext(os.path.basename(filename))[0] + '.mp3'
             jobs[job_id].update({
                 'status': 'done', 
                 'title': info.get('title', ''),
                 'filename': mp3_filename
             })
+            app.logger.info(f"Job {job_id} completed successfully")
     except Exception as e:
-        print(f"Error downloading: {str(e)}")
-        jobs[job_id].update({'status': 'error', 'error': str(e)})
+        error_msg = str(e)
+        app.logger.error(f"Job {job_id} failed: {error_msg}")
+        jobs[job_id].update({'status': 'error', 'error': error_msg})
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/logs')
+def get_logs():
+    if not os.path.exists(log_file):
+        return "No logs found."
+    with open(log_file, 'r') as f:
+        return Response(f.read(), mimetype='text/plain')
 
 @app.route('/convert', methods=['POST'])
 def convert():
@@ -94,7 +123,6 @@ def convert():
 
     return jsonify({'job_id': job_id})
 
-
 @app.route('/progress/<job_id>')
 def progress(job_id):
     def generate():
@@ -107,20 +135,16 @@ def progress(job_id):
             yield f"data: {json.dumps(job)}\n\n"
             
             if job['status'] in ('done', 'error'):
-                # Wait a bit so frontend can catch the 'done' state
                 time.sleep(2)
-                # We don't pop here yet, or we'll lose the filename for the download link
                 break
             time.sleep(0.5)
 
     return Response(generate(), mimetype='text/event-stream',
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
-
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(DOWNLOAD_DIR, filename, as_attachment=True)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
