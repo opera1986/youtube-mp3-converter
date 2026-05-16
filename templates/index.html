@@ -3,256 +3,543 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube → MP3</title>
+    <title>YouTube MP3 변환기</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 520px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
-        .logo svg { width: 36px; height: 36px; }
-        h1 { font-size: 22px; color: #1a1a1a; }
-        .subtitle {
-            color: #888;
-            font-size: 13px;
-            margin-bottom: 28px;
-            line-height: 1.6;
-        }
-        input {
-            width: 100%;
-            padding: 13px 16px;
-            border: 2px solid #e5e5e5;
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-            margin-bottom: 12px;
-            color: #333;
-        }
-        input:focus { border-color: #ff0000; }
-        input::placeholder { color: #bbb; }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #ff0000;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover:not(:disabled) { background: #d90000; }
-        button:disabled { background: #ddd; cursor: not-allowed; }
 
-        /* 진행률 영역 */
-        .progress-area {
-            margin-top: 20px;
-            display: none;
-        }
-        .progress-area.visible { display: block; }
-        .progress-label {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #555;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            color: #e0e0e0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 8px;
         }
-        .progress-label .stage { font-weight: 600; }
-        .progress-label .meta { color: #aaa; font-size: 12px; }
-        .bar-bg {
-            background: #f0f0f0;
-            border-radius: 99px;
-            height: 10px;
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff0000, #ff6b6b);
-            border-radius: 99px;
-            width: 0%;
-            transition: width 0.4s ease;
-        }
-        .bar-fill.converting {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+        .subtitle {
+            font-size: 14px;
+            color: #a0a0a0;
         }
 
-        /* 상태 메시지 */
-        .status {
-            margin-top: 14px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.5;
-            display: none;
+        .input-group {
+            margin-bottom: 20px;
         }
-        .status.success { background: #e8f5e9; color: #1b5e20; display: block; }
-        .status.error   { background: #fce4ec; color: #880e2f; display: block; }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="url"] {
+            flex: 1;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #e0e0e0;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input[type="url"]::placeholder {
+            color: #707070;
+        }
+
+        input[type="url"]:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #convertButton {
+            flex: 1;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        #convertButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        #convertButton:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        #convertButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .clipboard-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            width: 48px;
+            padding: 0;
+        }
+
+        .clipboard-btn:hover:not(:disabled) {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.6);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-section {
+            display: none;
+            margin-top: 28px;
+            padding-top: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-section.active {
+            display: block;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .progress-label {
+            font-size: 13px;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+            border-radius: 3px;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .progress-info {
+            font-size: 12px;
+            color: #80b0ff;
+            text-align: center;
+            font-family: 'Monaco', monospace;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 28px;
+            padding-top: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .result-section.active {
+            display: block;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .result-title {
+            font-size: 13px;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+        }
+
+        .video-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #00d4ff;
+            margin-bottom: 16px;
+            word-break: break-word;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .download-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+            text-decoration: none;
+            margin-bottom: 12px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .reset-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            color: #a0a0a0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #e0e0e0;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 14px 16px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border-radius: 12px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        .toast.success {
+            background: rgba(34, 197, 94, 0.9);
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: 24px 16px;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            button {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            .toast {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="logo">
-            <svg viewBox="0 0 36 36" fill="none">
-                <rect width="36" height="36" rx="8" fill="#FF0000"/>
-                <polygon points="14,11 26,18 14,25" fill="white"/>
-            </svg>
-            <h1>YouTube → MP3</h1>
-        </div>
-        <p class="subtitle">
-            YouTube URL을 입력하거나, <strong>복사 후 바로 버튼</strong>을 누르세요.<br>
-            변환된 MP3 파일은 <strong>Downloads 폴더</strong>에 저장됩니다.
-        </p>
-
-        <input type="text" id="urlInput" placeholder="주소를 입력하거나 복사 후 바로 버튼 클릭" autofocus />
-        <button id="convertBtn" onclick="startConvert()">MP3로 변환하기</button>
-
-        <div class="progress-area" id="progressArea">
-            <div class="progress-label">
-                <span class="stage" id="stageText">준비 중...</span>
-                <span class="meta" id="metaText"></span>
+    <div class="container">
+        <div class="glass-card">
+            <div class="header">
+                <div class="logo">🎵</div>
+                <h1>YouTube to MP3</h1>
+                <p class="subtitle">YouTube 동영상을 MP3로 변환하세요</p>
             </div>
-            <div class="bar-bg">
-                <div class="bar-fill" id="barFill"></div>
+
+            <div class="input-group">
+                <div class="input-wrapper">
+                    <input
+                        type="url"
+                        id="youtubeUrl"
+                        placeholder="YouTube 링크를 붙여넣으세요..."
+                    >
+                    <button id="clipboardBtn" class="clipboard-btn" title="클립보드에서 URL 복사">
+                        📋
+                    </button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="convertButton">변환 시작</button>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-label">
+                    <span>변환 진행 중</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-info" id="progressInfo">대기 중...</div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section" id="resultSection">
+                <div class="result-title">변환 완료!</div>
+                <div class="video-title" id="videoTitle"></div>
+                <a id="downloadLink" href="#" class="download-btn">
+                    ⬇️ MP3 다운로드
+                </a>
+                <button class="reset-btn" id="resetBtn">다시 변환하기</button>
             </div>
         </div>
-
-        <div class="status" id="status"></div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
+
     <script>
-        async function startConvert() {
-            const urlInput = document.getElementById('urlInput');
-            let url = urlInput.value.trim();
-            const btn = document.getElementById('convertBtn');
-            const status = document.getElementById('status');
+        const urlInput = document.getElementById('youtubeUrl');
+        const convertButton = document.getElementById('convertButton');
+        const clipboardBtn = document.getElementById('clipboardBtn');
+        const progressSection = document.getElementById('progressSection');
+        const resultSection = document.getElementById('resultSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressInfo = document.getElementById('progressInfo');
+        const videoTitle = document.getElementById('videoTitle');
+        const downloadLink = document.getElementById('downloadLink');
+        const resetBtn = document.getElementById('resetBtn');
+        const toastContainer = document.getElementById('toastContainer');
 
-            // 입력창이 비어있으면 클립보드 읽기 시도
-            if (!url) {
-                try {
-                    const clipboardText = await navigator.clipboard.readText();
-                    if (clipboardText && (clipboardText.includes('youtube.com') || clipboardText.includes('youtu.be'))) {
-                        url = clipboardText.trim();
-                        urlInput.value = url; // 시각적 피드백
-                    }
-                } catch (err) {
-                    console.error('클립보드 접근 실패:', err);
+        let currentEventSource = null;
+
+        function showToast(msg, type = 'error') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function setLoading(loading) {
+            convertButton.disabled = loading;
+            convertButton.textContent = loading ? '⏳ 변환 중...' : '변환 시작';
+            clipboardBtn.disabled = loading;
+        }
+
+        function showProgress() {
+            progressSection.classList.add('active');
+            resultSection.classList.remove('active');
+            progressFill.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressInfo.textContent = '대기 중...';
+        }
+
+        function updateProgress(data) {
+            const progress = Math.min(data.progress || 0, 99);
+            progressFill.style.width = `${progress}%`;
+            progressPercent.textContent = `${progress}%`;
+
+            const statusText = {
+                'downloading': '⬇️ 다운로드 중',
+                'converting': '⚙️ 변환 중',
+                'done': '✅ 완료',
+                'waiting': '⏳ 대기 중'
+            }[data.status] || '처리 중';
+
+            let infoText = statusText;
+            if (data.speed) infoText += ` | ${data.speed}`;
+            if (data.eta) infoText += ` | ${data.eta} 남음`;
+
+            progressInfo.textContent = infoText;
+        }
+
+        function showResult(fileId, title) {
+            progressSection.classList.remove('active');
+            resultSection.classList.add('active');
+            videoTitle.textContent = title || '제목 없음';
+            downloadLink.href = `/download/${fileId}`;
+            showToast('변환 완료! MP3를 다운로드하세요.', 'success');
+        }
+
+        function reset() {
+            urlInput.value = '';
+            progressSection.classList.remove('active');
+            resultSection.classList.remove('active');
+            convertButton.textContent = '변환 시작';
+            convertButton.disabled = false;
+            clipboardBtn.disabled = false;
+            if (currentEventSource) currentEventSource.close();
+        }
+
+        clipboardBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text.trim()) {
+                    urlInput.value = text.trim();
+                    urlInput.focus();
+                    showToast('클립보드에서 URL을 가져왔습니다.', 'success');
                 }
+            } catch (e) {
+                showToast('클립보드 접근 실패. URL을 직접 입력해주세요.', 'error');
             }
+        });
+
+        convertButton.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
 
             if (!url) {
-                showStatus('error', 'URL을 입력하거나 클립보드에 복사해주세요.');
+                showToast('YouTube URL을 입력해주세요.');
                 return;
             }
 
-            // 초기화
-            status.className = 'status';
-            status.textContent = '';
-            btn.disabled = true;
-            btn.textContent = '변환 중...';
-            showProgress(0, '시작 중...', '');
+            const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+            if (!youtubeRegex.test(url)) {
+                showToast('유효한 YouTube URL을 입력해주세요.');
+                return;
+            }
+
+            setLoading(true);
+            showProgress();
+
+            if (currentEventSource) currentEventSource.close();
 
             try {
                 const res = await fetch('/convert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ url }),
                 });
-                const { job_id, error } = await res.json();
 
-                if (!job_id) {
-                    throw new Error(error || '알 수 없는 오류');
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    setLoading(false);
+                    progressSection.classList.remove('active');
+                    showToast(data.error || '변환에 실패했습니다. 다시 시도해주세요.');
+                    return;
                 }
 
-                // SSE로 진행률 수신
-                const evtSource = new EventSource(`/progress/${job_id}`);
-                evtSource.onmessage = (e) => {
-                    const data = JSON.parse(e.data);
+                // SSE 실시간 프로그레스 수신
+                currentEventSource = new EventSource(`/progress/${data.job_id}`);
 
-                    if (data.status === 'downloading') {
-                        const meta = [data.speed, data.eta ? `남은 시간 ${data.eta}` : ''].filter(Boolean).join(' · ');
-                        showProgress(data.percent, `다운로드 중... ${data.percent}%`, meta);
+                currentEventSource.onmessage = (event) => {
+                    const progressData = JSON.parse(event.data);
+                    updateProgress(progressData);
 
-                    } else if (data.status === 'converting') {
-                        showProgress(100, 'MP3 변환 중...', '', true);
-
-                    } else if (data.status === 'done') {
-                        evtSource.close();
-                        hideProgress();
-                        showStatus('success', `✓ 완료! "${data.title}.mp3" 파일이 Downloads 폴더에 저장되었습니다.`);
-                        document.getElementById('urlInput').value = '';
-                        btn.disabled = false;
-                        btn.textContent = 'MP3로 변환하기';
-
-                    } else if (data.status === 'error') {
-                        evtSource.close();
-                        hideProgress();
-                        showStatus('error', '오류: ' + data.error);
-                        btn.disabled = false;
-                        btn.textContent = 'MP3로 변환하기';
+                    if (progressData.status === 'done') {
+                        setLoading(false);
+                        showResult(data.file_id, data.title);
+                        currentEventSource.close();
                     }
                 };
 
-                evtSource.onerror = () => {
-                    evtSource.close();
-                    hideProgress();
-                    showStatus('error', '서버 연결이 끊어졌습니다.');
-                    btn.disabled = false;
-                    btn.textContent = 'MP3로 변환하기';
+                currentEventSource.onerror = (e) => {
+                    setLoading(false);
+                    progressSection.classList.remove('active');
+                    showToast('연결이 끊어졌습니다. 다시 시도해주세요.');
+                    currentEventSource.close();
                 };
-
             } catch (e) {
-                hideProgress();
-                showStatus('error', '오류: ' + e.message);
-                btn.disabled = false;
-                btn.textContent = 'MP3로 변환하기';
+                setLoading(false);
+                progressSection.classList.remove('active');
+                showToast('서버 연결에 실패했습니다. 다시 시도해주세요.');
             }
-        }
+        });
 
-        function showProgress(percent, stage, meta, isConverting = false) {
-            document.getElementById('progressArea').classList.add('visible');
-            document.getElementById('stageText').textContent = stage;
-            document.getElementById('metaText').textContent = meta;
-            const bar = document.getElementById('barFill');
-            bar.style.width = percent + '%';
-            bar.className = 'bar-fill' + (isConverting ? ' converting' : '');
-        }
+        resetBtn.addEventListener('click', reset);
 
-        function hideProgress() {
-            document.getElementById('progressArea').classList.remove('visible');
-        }
-
-        function showStatus(type, msg) {
-            const el = document.getElementById('status');
-            el.className = 'status ' + type;
-            el.textContent = msg;
-        }
-
-        document.getElementById('urlInput').addEventListener('keypress', e => {
-            if (e.key === 'Enter') startConvert();
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !convertButton.disabled) {
+                convertButton.click();
+            }
         });
     </script>
 </body>
