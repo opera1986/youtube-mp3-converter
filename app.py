@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -8,7 +8,7 @@ import json
 import time
 import ssl
 
-# SSL certificate bypass for certain environments where certs are missing
+# SSL certificate bypass
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
@@ -19,7 +19,8 @@ else:
 app = Flask(__name__)
 CORS(app)
 
-DOWNLOAD_DIR = os.path.expanduser('~/Downloads')
+# Use a local directory for downloads to work on both local and cloud (Render)
+DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
@@ -49,16 +50,23 @@ def run_download(job_id, url):
         }],
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook],
-        'nocheckcertificate': True,  # Bypass SSL issues
+        'nocheckcertificate': True,
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': False,
+        'cachedir': False,
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            jobs[job_id].update({'status': 'done', 'title': info.get('title', '')})
+            filename = ydl.prepare_filename(info)
+            # Change extension to mp3 as it was post-processed
+            mp3_filename = os.path.splitext(os.path.basename(filename))[0] + '.mp3'
+            jobs[job_id].update({
+                'status': 'done', 
+                'title': info.get('title', ''),
+                'filename': mp3_filename
+            })
     except Exception as e:
         print(f"Error downloading: {str(e)}")
         jobs[job_id].update({'status': 'error', 'error': str(e)})
@@ -72,10 +80,7 @@ def index():
 @app.route('/convert', methods=['POST'])
 def convert():
     data = request.json
-    if not data:
-        return jsonify({'error': 'JSON 데이터가 필요합니다'}), 400
-        
-    url = data.get('url', '').strip()
+    url = data.get('url', '').strip() if data else ''
     if not url:
         return jsonify({'error': 'URL을 입력해주세요'}), 400
 
@@ -97,13 +102,12 @@ def progress(job_id):
                 yield f"data: {json.dumps({'status': 'error', 'error': '작업을 찾을 수 없습니다'})}\n\n"
                 break
             
-            data = json.dumps(job)
-            yield f"data: {data}\n\n"
+            yield f"data: {json.dumps(job)}\n\n"
             
             if job['status'] in ('done', 'error'):
-                # Give frontend a moment to receive 'done' or 'error' before cleanup
-                time.sleep(1)
-                jobs.pop(job_id, None)
+                # Wait a bit so frontend can catch the 'done' state
+                time.sleep(2)
+                # We don't pop here yet, or we'll lose the filename for the download link
                 break
             time.sleep(0.5)
 
@@ -111,7 +115,11 @@ def progress(job_id):
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(DOWNLOAD_DIR, filename, as_attachment=True)
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    print(f"서버 시작! 브라우저에서 http://127.0.0.1:{port} 을 열어주세요")
     app.run(debug=True, host='0.0.0.0', port=port, threaded=True)

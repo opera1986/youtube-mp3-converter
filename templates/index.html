@@ -423,29 +423,35 @@
         }
 
         function updateProgress(data) {
-            const progress = Math.min(data.progress || 0, 99);
+            const progress = Math.min(data.percent || 0, 100);
             progressFill.style.width = `${progress}%`;
             progressPercent.textContent = `${progress}%`;
 
             const statusText = {
+                'starting': '⏳ 준비 중...',
                 'downloading': '⬇️ 다운로드 중',
-                'converting': '⚙️ 변환 중',
+                'converting': '⚙️ MP3 변환 중',
                 'done': '✅ 완료',
-                'waiting': '⏳ 대기 중'
+                'error': '❌ 오류 발생'
             }[data.status] || '처리 중';
 
             let infoText = statusText;
-            if (data.speed) infoText += ` | ${data.speed}`;
-            if (data.eta) infoText += ` | ${data.eta} 남음`;
+            if (data.status === 'downloading') {
+                if (data.speed) infoText += ` | ${data.speed}`;
+                if (data.eta) infoText += ` | ${data.eta} 남음`;
+            } else if (data.status === 'converting') {
+                infoText = '⚙️ 고음질 MP3 추출 중... (잠시만 기다려주세요)';
+            }
 
             progressInfo.textContent = infoText;
         }
 
-        function showResult(fileId, title) {
+        function showResult(filename, title) {
             progressSection.classList.remove('active');
             resultSection.classList.add('active');
             videoTitle.textContent = title || '제목 없음';
-            downloadLink.href = `/download/${fileId}`;
+            // Use the filename provided by the backend done status
+            downloadLink.href = `/download/${encodeURIComponent(filename)}`;
             showToast('변환 완료! MP3를 다운로드하세요.', 'success');
         }
 
@@ -512,20 +518,32 @@
 
                 currentEventSource.onmessage = (event) => {
                     const progressData = JSON.parse(event.data);
+                    
+                    if (progressData.status === 'error') {
+                        setLoading(false);
+                        progressSection.classList.remove('active');
+                        showToast(progressData.error || '오류가 발생했습니다.');
+                        currentEventSource.close();
+                        return;
+                    }
+
                     updateProgress(progressData);
 
                     if (progressData.status === 'done') {
                         setLoading(false);
-                        showResult(data.file_id, data.title);
+                        showResult(progressData.filename, progressData.title);
                         currentEventSource.close();
                     }
                 };
 
                 currentEventSource.onerror = (e) => {
-                    setLoading(false);
-                    progressSection.classList.remove('active');
-                    showToast('연결이 끊어졌습니다. 다시 시도해주세요.');
-                    currentEventSource.close();
+                    // Only show error if we aren't already done
+                    if (!resultSection.classList.contains('active')) {
+                        setLoading(false);
+                        progressSection.classList.remove('active');
+                        showToast('서버 연결이 끊어졌습니다. 다시 시도해주세요.');
+                        currentEventSource.close();
+                    }
                 };
             } catch (e) {
                 setLoading(false);
