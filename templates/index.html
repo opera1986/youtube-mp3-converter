@@ -123,11 +123,11 @@
             <h1>YouTube → MP3</h1>
         </div>
         <p class="subtitle">
-            YouTube URL을 붙여넣고 버튼을 누르세요.<br>
+            YouTube URL을 입력하거나, <strong>복사 후 바로 버튼</strong>을 누르세요.<br>
             변환된 MP3 파일은 <strong>Downloads 폴더</strong>에 저장됩니다.
         </p>
 
-        <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autofocus />
+        <input type="text" id="urlInput" placeholder="주소를 입력하거나 복사 후 바로 버튼 클릭" autofocus />
         <button id="convertBtn" onclick="startConvert()">MP3로 변환하기</button>
 
         <div class="progress-area" id="progressArea">
@@ -145,12 +145,26 @@
 
     <script>
         async function startConvert() {
-            const url = document.getElementById('urlInput').value.trim();
+            const urlInput = document.getElementById('urlInput');
+            let url = urlInput.value.trim();
             const btn = document.getElementById('convertBtn');
             const status = document.getElementById('status');
 
+            // 입력창이 비어있으면 클립보드 읽기 시도
             if (!url) {
-                showStatus('error', 'URL을 입력해주세요.');
+                try {
+                    const clipboardText = await navigator.clipboard.readText();
+                    if (clipboardText && (clipboardText.includes('youtube.com') || clipboardText.includes('youtu.be'))) {
+                        url = clipboardText.trim();
+                        urlInput.value = url; // 시각적 피드백
+                    }
+                } catch (err) {
+                    console.error('클립보드 접근 실패:', err);
+                }
+            }
+
+            if (!url) {
+                showStatus('error', 'URL을 입력하거나 클립보드에 복사해주세요.');
                 return;
             }
 
